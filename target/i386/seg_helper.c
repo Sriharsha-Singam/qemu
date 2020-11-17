@@ -1203,9 +1203,41 @@ static void handle_even_inj(CPUX86State *env, int intno, int is_int,
  * the int instruction. next_eip is the env->eip value AFTER the interrupt
  * instruction. It is only relevant if is_int is TRUE.
  */
+
+//jzeng
+#include "../../../pemu.h"
+#include "../../../pin/pin.h"
+#include "../../../pemu_config.h"
+
 static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
                              int error_code, target_ulong next_eip, int is_hw)
 {
+
+    if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()){
+        if(intno == 0x80){
+            pemu_exec_stats.PEMU_int_level = 0; //jzeng
+            pemu_exec_stats.PEMU_start_trace_syscall = 1;
+            if(pemu_hook_funcs.enter_syscall_hook != 0){
+                pemu_hook_funcs.enter_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
+            }
+
+            //yang
+            if(cpu_single_env->regs[R_EAX] == 252)
+            {
+                if(pemu_hook_funcs.fini_hook) {
+                    pemu_hook_funcs.fini_hook(0, 0);
+                    pemu_exec_stats.PEMU_start = 0;
+                }
+            }
+#ifdef PEMU_DEBUG
+            //fprintf(stdout, "int80 start syscall\t%x\n", cpu_single_env->regs[R_EAX]);
+#endif
+        }else{
+            pemu_exec_stats.PEMU_int_level++;
+        }
+    }
+    //end
+
     CPUX86State *env = &cpu->env;
 
     if (qemu_loglevel_mask(CPU_LOG_INT)) {
@@ -2113,6 +2145,9 @@ static inline void validate_seg(CPUX86State *env, int seg_reg, int cpl)
 }
 
 /* protected mode iret */
+//jzeng
+long PEMU_iret_target_pc;
+//end
 static inline void helper_ret_protected(CPUX86State *env, int shift,
                                         int is_iret, int addend,
                                         uintptr_t retaddr)
@@ -2168,6 +2203,11 @@ static inline void helper_ret_protected(CPUX86State *env, int shift,
     LOG_PCALL("lret new %04x:" TARGET_FMT_lx " s=%d addend=0x%x\n",
               new_cs, new_eip, shift, addend);
     LOG_PCALL_STATE(env_cpu(env));
+
+    //jzeng
+    PEMU_iret_target_pc = new_eip;
+    //end
+
     if ((new_cs & 0xfffc) == 0) {
         raise_exception_err_ra(env, EXCP0D_GPF, new_cs & 0xfffc, retaddr);
     }
@@ -2362,6 +2402,47 @@ void helper_iret_protected(CPUX86State *env, int shift, int next_eip)
         helper_ret_protected(env, shift, 1, 0, GETPC());
     }
     env->hflags2 &= ~HF2_NMI_MASK;
+
+    //jzeng
+    if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()) {
+#if 0
+        if(pemu_exec_stats.PEMU_start_trace_syscall) {
+			pemu_exec_stats.PEMU_int_level--;
+			if(pemu_exec_stats.PEMU_int_level == -1) {
+				pemu_exec_stats.PEMU_start_trace_syscall = 0;
+				pemu_exec_stats.PEMU_int_level = 0;
+				if(pemu_hook_funcs.exit_syscall_hook != 0) {
+					pemu_hook_funcs.exit_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
+				}
+			}
+		}
+#endif
+        //yang
+        pemu_exec_stats.PEMU_int_level--;
+        if((cpu_single_env->hflags & HF_CPL_MASK) == 3)
+        {
+            pemu_exec_stats.PEMU_int_level = 0;
+            if(pemu_exec_stats.PEMU_start_trace_syscall) {
+                pemu_exec_stats.PEMU_start_trace_syscall = 0;
+                if(pemu_hook_funcs.exit_syscall_hook != 0) {
+                    pemu_hook_funcs.exit_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
+                }
+            }
+        }
+
+    }
+//end
+
+
+    //jzeng
+#if 0
+    if(pemu_exec_stats.PEMU_start
+			&& pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
+			&& PEMU_iret_target_pc < 0xc0000000) {
+		introspect_int80_mmap_return(cpu_single_env);
+	}
+#endif
+    //end
 }
 
 void helper_lret_protected(CPUX86State *env, int shift, int addend)
@@ -2371,6 +2452,24 @@ void helper_lret_protected(CPUX86State *env, int shift, int addend)
 
 void helper_sysenter(CPUX86State *env)
 {
+
+    //jzeng
+    if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()){
+        pemu_exec_stats.PEMU_start_trace_syscall = 1;
+        pemu_exec_stats.PEMU_int_level = 0;
+        //fprintf(stdout, "sysenter system call: %d eip=%x\n", env->regs[R_EAX], env->eip);
+        if(pemu_hook_funcs.enter_syscall_hook != 0){
+            pemu_hook_funcs.enter_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
+        }
+        if(cpu_single_env->regs[R_EAX] == 252) {
+            if(pemu_hook_funcs.fini_hook) {
+                pemu_hook_funcs.fini_hook(0, 0);
+                pemu_exec_stats.PEMU_start = 0;
+            }
+        }
+    }
+    //end
+
     if (env->sysenter_cs == 0) {
         raise_exception_err_ra(env, EXCP0D_GPF, 0, GETPC());
     }
@@ -2439,6 +2538,12 @@ void helper_sysexit(CPUX86State *env, int dflag)
     }
     env->regs[R_ESP] = env->regs[R_ECX];
     env->eip = env->regs[R_EDX];
+
+    //jzeng
+    //if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()){
+    //introspect_sysexit(env);
+    //}
+    //end
 }
 
 target_ulong helper_lsl(CPUX86State *env, target_ulong selector1)

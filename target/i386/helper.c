@@ -663,8 +663,43 @@ void cpu_x86_update_cr0(CPUX86State *env, uint32_t new_cr0)
 
 /* XXX: in legacy PAE mode, generate a GPF if reserved bits are set in
    the PDPT */
+
+//jzeng
+#include "../../../linux.h"
+#include "../../../pemu.h"
+void PEMU_start_PEMUThread(void);
+//yang
+void helper_find_process(target_ulong pc)
+{
+    if(pemu_exec_stats.PEMU_cr3 == 0
+       && pemu_exec_stats.PEMU_start)
+    {
+        if(PEMU_find_process(0)) {
+            PEMU_start_PEMUThread();
+            if(pemu_exec_stats.PEMU_cr3 == cpu_single_env->cr[3])
+            {
+                tb_flush(cpu_single_env);
+                pemu_exec_stats.PEMU_already_flush = 1;
+                pemu_exec_stats.PEMU_int_level = -1;
+            }
+        }
+    }
+}
+
 void cpu_x86_update_cr3(CPUX86State *env, target_ulong new_cr3)
 {
+    helper_find_process(0);
+    //jzeng.begin
+    if(!pemu_exec_stats.PEMU_already_flush
+       && pemu_exec_stats.PEMU_start
+       && pemu_exec_stats.PEMU_cr3 != 0
+       && pemu_exec_stats.PEMU_cr3 == new_cr3) {
+        tb_flush(env);
+        pemu_exec_stats.PEMU_already_flush = 1;
+        pemu_exec_stats.PEMU_int_level = -1;
+    }
+    //end
+
     env->cr[3] = new_cr3;
     if (env->cr[0] & CR0_PG_MASK) {
         qemu_log_mask(CPU_LOG_MMU,

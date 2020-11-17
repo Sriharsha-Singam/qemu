@@ -204,6 +204,26 @@ DEF_HELPER_FLAGS_3(wrpkru, TCG_CALL_NO_WG, void, env, i32, i64)
 DEF_HELPER_FLAGS_2(pdep, TCG_CALL_NO_RWG_SE, tl, tl, tl)
 DEF_HELPER_FLAGS_2(pext, TCG_CALL_NO_RWG_SE, tl, tl, tl)
 
+//jzeng
+//DEF_HELPER_0(inst_hook_0, void)
+DEF_HELPER_1(pemu_trace, void, int)
+DEF_HELPER_1(find_process, void, int)
+DEF_HELPER_1(inst_hook_1, void, ptr)
+DEF_HELPER_2(inst_hook_2, void, ptr, ptr)
+DEF_HELPER_3(inst_hook_3, void, ptr, ptr, ptr)
+DEF_HELPER_4(inst_hook_4, void, ptr, ptr, ptr, ptr)
+DEF_HELPER_5(inst_hook_5, void, ptr, ptr, ptr, ptr, ptr)
+
+DEF_HELPER_1(introspect_hook, void, int)
+#if 0
+DEF_HELPER_1(bbl_hook_1, void, ptr)
+DEF_HELPER_2(bbl_hook_2, void, ptr, ptr)
+DEF_HELPER_3(bbl_hook_3, void, ptr, ptr, ptr)
+DEF_HELPER_4(bbl_hook_4, void, ptr, ptr, ptr, ptr)
+DEF_HELPER_5(bbl_hook_5, void, ptr, ptr, ptr, ptr, ptr)
+#endif
+//end
+
 /* MMX/SSE */
 
 DEF_HELPER_2(ldmxcsr, void, env, i32)

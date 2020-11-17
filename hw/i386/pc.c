@@ -933,6 +933,10 @@ void xen_load_linux(PCMachineState *pcms)
     x86ms->fw_cfg = fw_cfg;
 }
 
+//jzeng
+#define PEMU_EXTRA_MEMORY 0x200000
+//end
+
 void pc_memory_init(PCMachineState *pcms,
                     MemoryRegion *system_memory,
                     MemoryRegion *rom_memory,
@@ -959,7 +963,7 @@ void pc_memory_init(PCMachineState *pcms,
     *ram_memory = machine->ram;
     ram_below_4g = g_malloc(sizeof(*ram_below_4g));
     memory_region_init_alias(ram_below_4g, NULL, "ram-below-4g", machine->ram,
-                             0, x86ms->below_4g_mem_size);
+                             0, x86ms->below_4g_mem_size + PEMU_EXTRA_MEMORY);
     memory_region_add_subregion(system_memory, 0, ram_below_4g);
     e820_add_entry(0, x86ms->below_4g_mem_size, E820_RAM);
     if (x86ms->above_4g_mem_size > 0) {
@@ -1028,7 +1032,7 @@ void pc_memory_init(PCMachineState *pcms,
     pc_system_firmware_init(pcms, rom_memory);
 
     option_rom_mr = g_malloc(sizeof(*option_rom_mr));
-    memory_region_init_ram(option_rom_mr, NULL, "pc.rom", PC_ROM_SIZE,
+    memory_region_init_ram(option_rom_mr, NULL, "pc.rom", PC_ROM_SIZE + PEMU_EXTRA_MEMORY,
                            &error_fatal);
     if (pcmc->pci_enabled) {
         memory_region_set_readonly(option_rom_mr, true);

@@ -1677,6 +1677,54 @@ int monitor_fd_param(Monitor *mon, const char *fdname, Error **errp)
     return fd;
 }
 
+//jzeng:
+#include "../../pemu.h"
+#include <dlfcn.h>
+static void *handle;
+static pthread_t PEMUThread;
+
+void *do_PEMUThread(void *param)
+{
+    char *error;
+    handle = dlopen(pemu_exec_stats.PEMU_plugin_name, RTLD_NOW);
+    if (0 != (error = dlerror())){
+        fprintf(stderr, "error: %s\n", error);
+    }else{
+        void*(*plugin_main) (void) = dlsym(handle, "main");
+        if (0 != (error = dlerror())) {
+            fprintf(stderr, "error initializing: %s\n", error);
+        }
+        else {
+            int r = (int)plugin_main();
+            fprintf(stdout, "PEMU_start\t%x\t%d\t%x\n", pemu_exec_stats.PEMU_start, r, plugin_main);
+        }
+    }
+}
+void PEMU_start_PEMUThread(void)
+{
+    pthread_create(&PEMUThread, NULL, &do_PEMUThread, (void *) 0);
+}
+
+
+static void do_command(Monitor *mon, const QDict *qdict)
+{
+    const char *pname;
+
+    pname = qdict_get_str(qdict, "prog");
+    strcpy(pemu_exec_stats.PEMU_binary_name, pname);
+
+    pname = qdict_get_str(qdict, "plugin");
+    sprintf(pemu_exec_stats.PEMU_plugin_name, "../../plugins/%s", pname);
+
+    PEMU_init(mon_get_cpu());
+
+    fprintf(stdout, "program: %s\tplugin: %s\n", pemu_exec_stats.PEMU_binary_name,
+            pemu_exec_stats.PEMU_plugin_name);
+
+    pemu_exec_stats.PEMU_start = 1;
+}
+
+
 /* Please update hmp-commands.hx when adding or changing commands */
 static HMPCommand hmp_info_cmds[] = {
 #include "hmp-commands-info.h"

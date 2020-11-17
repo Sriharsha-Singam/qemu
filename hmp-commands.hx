@@ -269,6 +269,21 @@ ERST
     },
 
 SRST
+``pemu`` *tag*|*id*
+  Set the whole virtual machine to the snapshot identified by the tag
+  *tag* or the unique snapshot ID *id*.
+ERST
+
+    {
+		.name       = "pemu",
+        .args_type  = "prog:s,plugin:s",
+        .params		= "prog,plugin",
+		.help       = "start pemu",
+        .mhandler.cmd = do_command,
+
+    },
+
+SRST
 ``logfile`` *filename*
   Output logs to *filename*.
 ERST

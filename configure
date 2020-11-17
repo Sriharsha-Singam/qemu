@@ -2147,8 +2147,8 @@ fi
 # Detect support for PT_GNU_RELRO + DT_BIND_NOW.
 # The combination is known as "full relro", because .got.plt is read-only too.
 if compile_prog "" "-Wl,-z,relro -Wl,-z,now" ; then
-  QEMU_LDFLAGS="-Wl,-z,relro -Wl,-z,now $QEMU_LDFLAGS"
-fi
+  QEMU_LDFLAGS="-Wl,-z,relro -Wl,-E -Wl,-z,now $QEMU_LDFLAGS" #jzeng: add -Wl,-E
+fi 
 
 ##########################################
 # __sync_fetch_and_and requires at least -march=i486. Many toolchains
@@ -4425,6 +4425,51 @@ EOF
     glusterfs="no"
   fi
 fi
+
+#jzeng
+
+# xed support
+    
+HST=`uname -m`    
+if test "$HST" = "x86_64"; then
+        HOST_ARCH=ia32e
+fi
+if test "$HST" = "amd_64"; then
+        HOST_ARCH=ia32e
+fi
+if test "$HST" = "i686"; then
+        HOST_ARCH=ia32
+fi
+if test "$HST" = "x86"; then
+        HOST_ARCH=ia32
+fi
+if test "$HST" = "i386"; then
+        HOST_ARCH=ia32
+fi
+if test "$HST" = "ia64"; then
+        HOST_ARCH=ipf
+fi
+
+TARGET=$HOST_ARCH
+
+#define TARGET_LONG
+if test "$HOST_ARCH" = "ia32e"; then
+    TARGET_LONG=intel64
+fi
+if test "$HOST_ARCH" = "ia32"; then
+    TARGET_LONG=ia32
+fi
+if test "$HOST_ARCH" = "ipf"; then
+    TARGET_LONG=ia64
+fi
+
+#XEDKIT=$source_path/xed2/xed2-intel64
+#XEDLPATH=-L$XEDKIT/lib
+#XEDCFLAG=-I$XEDKIT/include
+
+XEDKIT=$source_path/../xed2/xed2-$TARGET_LONG
+XEDLPATH=-L$XEDKIT/lib
+XEDCFLAG=-I$XEDKIT/include
 
 # Check for inotify functions when we are building linux-user
 # emulator.  This is done because older glibc versions don't
@@ -7664,7 +7709,7 @@ echo "CFLAGS=$CFLAGS" >> $config_host_mak
 echo "CFLAGS_NOPIE=$CFLAGS_NOPIE" >> $config_host_mak
 echo "QEMU_CFLAGS=$QEMU_CFLAGS" >> $config_host_mak
 echo "QEMU_CXXFLAGS=$QEMU_CXXFLAGS" >> $config_host_mak
-echo "QEMU_INCLUDES=$QEMU_INCLUDES" >> $config_host_mak
+echo "QEMU_INCLUDES=$QEMU_INCLUDES $XEDCFLAG" >> $config_host_mak
 if test "$sparse" = "yes" ; then
   echo "CC           := REAL_CC=\"\$(CC)\" cgcc"       >> $config_host_mak
   echo "CPP          := REAL_CC=\"\$(CPP)\" cgcc"      >> $config_host_mak
@@ -7676,7 +7721,7 @@ echo "QEMU_LDFLAGS=$QEMU_LDFLAGS" >> $config_host_mak
 echo "LDFLAGS_NOPIE=$LDFLAGS_NOPIE" >> $config_host_mak
 echo "LD_REL_FLAGS=$LD_REL_FLAGS" >> $config_host_mak
 echo "LD_I386_EMULATION=$ld_i386_emulation" >> $config_host_mak
-echo "LIBS+=$LIBS" >> $config_host_mak
+echo "LIBS+=$LIBS $XEDLPATH -lxed" >> $config_host_mak
 echo "LIBS_TOOLS+=$libs_tools" >> $config_host_mak
 echo "PTHREAD_LIB=$PTHREAD_LIB" >> $config_host_mak
 echo "EXESUF=$EXESUF" >> $config_host_mak

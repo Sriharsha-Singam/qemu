@@ -279,7 +279,7 @@ ERST
         .args_type  = "prog:s,plugin:s",
         .params		= "prog,plugin",
 		.help       = "start pemu",
-        .mhandler.cmd = do_command,
+        .cmd        = do_command,
 
     },
 

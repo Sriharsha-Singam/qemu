@@ -8810,7 +8810,7 @@ void gen_intermediate_code(CPUState *cpu, TranslationBlock *tb, int max_insns)
         //end
 
         //yang
-        pc_ptr = disas_insn(env, dc, pc_ptr, 1);
+        pc_ptr = disas_insn(dc, cpu, 1);
 #if 0
         //jzeng: for introspection
 		if(pemu_exec_stats.PEMU_start

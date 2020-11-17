@@ -8553,6 +8553,39 @@ static void i386_tr_init_disas_context(DisasContextBase *dcbase, CPUState *cpu)
     dc->ptr0 = tcg_temp_new_ptr();
     dc->ptr1 = tcg_temp_new_ptr();
     dc->cc_srcT = tcg_temp_local_new();
+
+
+    //jzeng: routine instrumentation
+    //end
+
+    //jzeng: basic block instrumentation
+    if(pemu_exec_stats.PEMU_start
+       && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
+       && pemu_exec_stats.PEMU_int_level == 0
+       && (tb->pc < 0xc0000000)
+            ) {
+        //yang.begin
+        //	if(tb->pc >=0x8000000 && tb->pc <=0x8100000)
+        {
+            if(pemu_exec_stats.PEMU_disas_start == 0)
+            {
+                PEMU_disas_trace(tb->pc);
+                PEMU_set_trace(tb->pc);
+                pemu_exec_stats.PEMU_disas_start = 1;
+            }else if(PEMU_trace_need_disas(tb->pc))
+            {
+                PEMU_disas_trace(tb->pc);
+                PEMU_set_trace(tb->pc);
+            }
+        }
+        //yang.end
+        if(pemu_hook_funcs.bbl_hook != 0) {
+            //fprintf(stdout, "new bbl %x\n", tb->pc);
+            disas_basic_block_ex(tb->pc, &pemu_bbl);
+            pemu_hook_funcs.bbl_hook(pemu_bbl.bbl, 0);
+        }
+    }
+    //end
 }
 
 static void i386_tr_tb_start(DisasContextBase *db, CPUState *cpu)
@@ -8601,7 +8634,50 @@ static void i386_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
     }
 #endif
 
-    pc_next = disas_insn(dc, cpu);
+    //jzeng: inst instrumentation
+    target_ulong cur_ptr = dc->base.pc_next;
+
+    if(pemu_exec_stats.PEMU_start
+       && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
+       && pemu_exec_stats.PEMU_int_level == 0
+            ) {
+        //yang.begin
+        if(cur_ptr < 0xc0000000)
+        {
+            if(PEMU_disas_handle_branch(cur_ptr))
+                gen_helper_pemu_trace(tcg_const_i32(cur_ptr));
+        }
+        //yang.end
+
+#if 0
+        if(pemu_hook_funcs.inst_hook != 0) {
+				//fprintf(stdout, "new inst %x\n", tb->pc);
+				//pemu_hook_funcs.inst_hook(pemu_bbl.inst, 0);
+				if(disas_one_inst_ex(cur_ptr, &pemu_inst) == XED_ERROR_NONE) {
+					pemu_inst.PEMU_inst_pc = cur_ptr;
+					pemu_hook_funcs.inst_hook(&pemu_inst.PEMU_xedd_g, 0);
+				}
+			}
+#endif
+    }
+    //end
+
+    pc_next = disas_insn(dc, cpu, 0);
+
+#if 0
+    //jzeng: for introspection
+		if(pemu_exec_stats.PEMU_start
+				&& pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
+			//&& pemu_exec_stats.PEMU_start_trace_syscall == 0
+			//&& pemu_exec_stats.PEMU_int_level != 0
+			&& cur_ptr < 0xc0000000
+		  ) {
+			printf("translate: %x\n", cur_ptr);
+			gen_helper_introspec_hook(tcg_const_i32(cur_ptr));
+		}
+		//end
+#endif
+
 
     if (dc->tf || (dc->base.tb->flags & HF_INHIBIT_IRQ_MASK)) {
         /* if single step mode, we generate only one instruction and
@@ -8637,12 +8713,27 @@ static void i386_tr_tb_stop(DisasContextBase *dcbase, CPUState *cpu)
         gen_jmp_im(dc, dc->base.pc_next - dc->cs_base);
         gen_eob(dc);
     }
+
+    //jzeng
+    if(pemu_exec_stats.PEMU_start
+       && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
+        //&& (tb->pc >= 0x8048394 && tb->pc <= 0x80483e1)
+            ) {
+        if(pemu_hook_funcs.bbl_hook != 0){
+            end_basic_block(pemu_bbl.bbl);
+        }
+    }
+    //end
 }
 
 static void i386_tr_disas_log(const DisasContextBase *dcbase,
                               CPUState *cpu)
 {
     DisasContext *dc = container_of(dcbase, DisasContext, base);
+
+    if (pemu_exec_stats.PEMU_cr3 == cpu->env_ptr->cr[3]) {
+        out_asm  = 1;
+    }
 
     qemu_log("IN: %s\n", lookup_symbol(dc->base.pc_first));
     log_target_disas(cpu, dc->base.pc_first, dc->base.tb->size);
@@ -8658,218 +8749,12 @@ static const TranslatorOps i386_tr_ops = {
     .disas_log          = i386_tr_disas_log,
 };
 
-
-//#include "qemu/osdep.h"
-//#include "qemu/error-report.h"
-//#include "cpu.h"
-//#include "tcg/tcg.h"
-//#include "tcg/tcg-op.h"
-//#include "exec/exec-all.h"
-//#include "exec/gen-icount.h"
-//#include "exec/log.h"
-//#include "exec/translator.h"
-//#include "exec/plugin-gen.h"
-
-
 /* generate intermediate code for basic block 'tb'.  */
 void gen_intermediate_code(CPUState *cpu, TranslationBlock *tb, int max_insns)
 {
     DisasContext dc;
 
-//    translator_loop(&i386_tr_ops, &dc.base, cpu, tb, max_insns);
-
-    const TranslatorOps *ops = &i386_tr_ops;
-    DisasContextBase *db = &dc.base;
-
-    int bp_insn = 0;
-    bool plugin_enabled;
-
-    /* Initialize DisasContext */
-    db->tb = tb;
-    db->pc_first = tb->pc;
-    db->pc_next = db->pc_first;
-    db->is_jmp = DISAS_NEXT;
-    db->num_insns = 0;
-    db->max_insns = max_insns;
-    db->singlestep_enabled = cpu->singlestep_enabled;
-
-    ops->init_disas_context(db, cpu);
-    tcg_debug_assert(db->is_jmp == DISAS_NEXT);  /* no early exit */
-
-    /* Reset the temp count so that we can identify leaks */
-    tcg_clear_temp_count();
-
-    //jzeng: routine instrumentation
-    //end
-
-    //jzeng: basic block instrumentation
-    if(pemu_exec_stats.PEMU_start
-       && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
-       && pemu_exec_stats.PEMU_int_level == 0
-       && (tb->pc < 0xc0000000)
-            ) {
-        //yang.begin
-        //	if(tb->pc >=0x8000000 && tb->pc <=0x8100000)
-        {
-            if(pemu_exec_stats.PEMU_disas_start == 0)
-            {
-                PEMU_disas_trace(tb->pc);
-                PEMU_set_trace(tb->pc);
-                pemu_exec_stats.PEMU_disas_start = 1;
-            }else if(PEMU_trace_need_disas(tb->pc))
-            {
-                PEMU_disas_trace(tb->pc);
-                PEMU_set_trace(tb->pc);
-            }
-        }
-        //yang.end
-        if(pemu_hook_funcs.bbl_hook != 0) {
-            //fprintf(stdout, "new bbl %x\n", tb->pc);
-            disas_basic_block_ex(tb->pc, &pemu_bbl);
-            pemu_hook_funcs.bbl_hook(pemu_bbl.bbl, 0);
-        }
-    }
-    //end
-
-
-    /* Start translating.  */
-    gen_tb_start(db->tb);
-    ops->tb_start(db, cpu);
-    tcg_debug_assert(db->is_jmp == DISAS_NEXT);  /* no early exit */
-
-    plugin_enabled = plugin_gen_tb_start(cpu, tb);
-
-    while (true) {
-        db->num_insns++;
-        ops->insn_start(db, cpu);
-        tcg_debug_assert(db->is_jmp == DISAS_NEXT);  /* no early exit */
-
-        if (plugin_enabled) {
-            plugin_gen_insn_start(cpu, db);
-        }
-
-        /* Pass breakpoint hits to target for further processing */
-        if (!db->singlestep_enabled
-            && unlikely(!QTAILQ_EMPTY(&cpu->breakpoints))) {
-            CPUBreakpoint *bp;
-            QTAILQ_FOREACH(bp, &cpu->breakpoints, entry) {
-                if (bp->pc == db->pc_next) {
-                    if (ops->breakpoint_check(db, cpu, bp)) {
-                        bp_insn = 1;
-                        break;
-                    }
-                }
-            }
-            /* The breakpoint_check hook may use DISAS_TOO_MANY to indicate
-               that only one more instruction is to be executed.  Otherwise
-               it should use DISAS_NORETURN when generating an exception,
-               but may use a DISAS_TARGET_* value for Something Else.  */
-            if (db->is_jmp > DISAS_TOO_MANY) {
-                break;
-            }
-        }
-
-        /* Disassemble one instruction.  The translate_insn hook should
-           update db->pc_next and db->is_jmp to indicate what should be
-           done next -- either exiting this loop or locate the start of
-           the next instruction.  */
-        if (db->num_insns == db->max_insns
-            && (tb_cflags(db->tb) & CF_LAST_IO)) {
-            /* Accept I/O on the last instruction.  */
-            gen_io_start();
-            ops->translate_insn(db, cpu);
-        } else {
-            ops->translate_insn(db, cpu);
-        }
-
-        //jzeng: inst instrumentation
-        target_ulong cur_ptr = pc_ptr;
-
-        if(pemu_exec_stats.PEMU_start
-           && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
-           && pemu_exec_stats.PEMU_int_level == 0
-                ) {
-            //yang.begin
-            if(pc_ptr < 0xc0000000)
-            {
-                if(PEMU_disas_handle_branch(pc_ptr))
-                    gen_helper_pemu_trace(tcg_const_i32(pc_ptr));
-            }
-            //yang.end
-#if 0
-            if(pemu_hook_funcs.inst_hook != 0) {
-				//fprintf(stdout, "new inst %x\n", tb->pc);
-				//pemu_hook_funcs.inst_hook(pemu_bbl.inst, 0);
-				if(disas_one_inst_ex(pc_ptr, &pemu_inst) == XED_ERROR_NONE) {
-					pemu_inst.PEMU_inst_pc = pc_ptr;
-					pemu_hook_funcs.inst_hook(&pemu_inst.PEMU_xedd_g, 0);
-				}
-			}
-#endif
-        }
-        //end
-
-        //yang
-        pc_ptr = disas_insn(dc, cpu, 1);
-#if 0
-        //jzeng: for introspection
-		if(pemu_exec_stats.PEMU_start
-				&& pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
-			//&& pemu_exec_stats.PEMU_start_trace_syscall == 0
-			//&& pemu_exec_stats.PEMU_int_level != 0
-			&& cur_ptr < 0xc0000000
-		  ) {
-			printf("translate: %x\n", cur_ptr);
-			gen_helper_introspec_hook(tcg_const_i32(cur_ptr));
-		}
-		//end
-#endif
-
-        /* Stop translation if translate_insn so indicated.  */
-        if (db->is_jmp != DISAS_NEXT) {
-            break;
-        }
-
-        /*
-         * We can't instrument after instructions that change control
-         * flow although this only really affects post-load operations.
-         */
-        if (plugin_enabled) {
-            plugin_gen_insn_end();
-        }
-
-        /* Stop translation if the output buffer is full,
-           or we have executed all of the allowed instructions.  */
-        if (tcg_op_buf_full() || db->num_insns >= db->max_insns) {
-            db->is_jmp = DISAS_TOO_MANY;
-            break;
-        }
-    }
-
-    /* Emit code to exit the TB, as indicated by db->is_jmp.  */
-    ops->tb_stop(db, cpu);
-    gen_tb_end(db->tb, db->num_insns - bp_insn);
-
-    if (plugin_enabled) {
-        plugin_gen_tb_end(cpu);
-    }
-
-    /* The disas_log hook may use these values rather than recompute.  */
-    db->tb->size = db->pc_next - db->pc_first;
-    db->tb->icount = db->num_insns;
-
-#ifdef DEBUG_DISAS
-    if (qemu_loglevel_mask(CPU_LOG_TB_IN_ASM)
-        && qemu_log_in_addr_range(db->pc_first)
-        && pemu_exec_stats.PEMU_cr3 == env->cr[3] && pc_start <0xc0000000) {
-        out_asm = 1;
-        FILE *logfile = qemu_log_lock();
-        qemu_log("----------------\n");
-        ops->disas_log(db, cpu);
-        qemu_log("\n");
-        qemu_log_unlock(logfile);
-    }
-#endif
+    translator_loop(&i386_tr_ops, &dc.base, cpu, tb, max_insns);
 }
 
 void restore_state_to_opc(CPUX86State *env, TranslationBlock *tb,

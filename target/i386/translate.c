@@ -8562,7 +8562,7 @@ static void i386_tr_init_disas_context(DisasContextBase *dcbase, CPUState *cpu)
     if(pemu_exec_stats.PEMU_start
        && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()
        && pemu_exec_stats.PEMU_int_level == 0
-       && (tb->pc < 0xc0000000)
+       && (dc->base.tb->pc < 0xc0000000)
             ) {
         //yang.begin
         //	if(tb->pc >=0x8000000 && tb->pc <=0x8100000)
@@ -8730,8 +8730,8 @@ static void i386_tr_disas_log(const DisasContextBase *dcbase,
                               CPUState *cpu)
 {
     DisasContext *dc = container_of(dcbase, DisasContext, base);
-
-    if (pemu_exec_stats.PEMU_cr3 == cpu->env_ptr->cr[3]) {
+    CPUX86State *env = cpu->env_ptr;
+    if (pemu_exec_stats.PEMU_cr3 == env->cr[3]) {
         out_asm  = 1;
     }
 

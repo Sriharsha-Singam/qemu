@@ -4515,7 +4515,7 @@ static target_ulong disas_insn(DisasContext *s, CPUState *cpu, int search_pc)
             if(1) {
                 pemu_exec_stats.pin_exec_stats.pin_args[IARG_INST_PTR] = pc_start;
             }
-            PEMU_instrument_code(pc, s->base.tb->pc, search_pc);
+            PEMU_instrument_code((void*)pc, s->base.tb->pc, search_pc);
         }
     }
 #if 0

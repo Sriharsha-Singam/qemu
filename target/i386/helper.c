@@ -674,11 +674,11 @@ void helper_find_process(CPUX86State *env, target_ulong pc)
     if(pemu_exec_stats.PEMU_cr3 == 0
        && pemu_exec_stats.PEMU_start)
     {
-        if(PEMU_find_process(env, 0)) {
+        if(PEMU_find_process(0)) {
             PEMU_start_PEMUThread();
             if(pemu_exec_stats.PEMU_cr3 == env->cr[3])
             {
-                tb_flush(env);
+                tb_flush(env_cpu(env));
                 pemu_exec_stats.PEMU_already_flush = 1;
                 pemu_exec_stats.PEMU_int_level = -1;
             }
@@ -694,7 +694,7 @@ void cpu_x86_update_cr3(CPUX86State *env, target_ulong new_cr3)
        && pemu_exec_stats.PEMU_start
        && pemu_exec_stats.PEMU_cr3 != 0
        && pemu_exec_stats.PEMU_cr3 == new_cr3) {
-        tb_flush(env);
+        tb_flush(env_cpu(env));
         pemu_exec_stats.PEMU_already_flush = 1;
         pemu_exec_stats.PEMU_int_level = -1;
     }

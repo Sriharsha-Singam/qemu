@@ -1213,6 +1213,8 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
                              int error_code, target_ulong next_eip, int is_hw)
 {
 
+    CPUX86State *env = &cpu->env;
+
     if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()){
         if(intno == 0x80){
             pemu_exec_stats.PEMU_int_level = 0; //jzeng
@@ -1222,7 +1224,7 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
             }
 
             //yang
-            if(cpu->env->regs[R_EAX] == 252)
+            if(env->regs[R_EAX] == 252)
             {
                 if(pemu_hook_funcs.fini_hook) {
                     pemu_hook_funcs.fini_hook(0, 0);
@@ -1230,7 +1232,7 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
                 }
             }
 #ifdef PEMU_DEBUG
-            //fprintf(stdout, "int80 start syscall\t%x\n", cpu->env->regs[R_EAX]);
+            //fprintf(stdout, "int80 start syscall\t%x\n", env->regs[R_EAX]);
 #endif
         }else{
             pemu_exec_stats.PEMU_int_level++;
@@ -1238,7 +1240,6 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
     }
     //end
 
-    CPUX86State *env = &cpu->env;
 
     if (qemu_loglevel_mask(CPU_LOG_INT)) {
         if ((env->cr[0] & CR0_PE_MASK)) {

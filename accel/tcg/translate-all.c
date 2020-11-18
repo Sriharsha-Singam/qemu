@@ -349,6 +349,22 @@ static int cpu_restore_state_from_tb(CPUState *cpu, TranslationBlock *tb,
         return -1;
     }
 
+
+    //yang
+    extern int out_asm;
+    if(out_asm)
+    {
+        qemu_log("restore %x %x\n", tb->pc, searched_pc);
+        out_asm = 0;
+#if 0
+        qemu_log("OUT pc %x\n", tb->pc);
+        qemu_log("OUT: [size=%d]\n", *gen_code_size_ptr);
+        log_disas(tb->tc.ptr, *gen_code_size_ptr);
+        qemu_log("\n");
+        qemu_log_flush();
+#endif
+    }
+
     /* Reconstruct the stored insn data while looking for the point at
        which the end of the insn exceeds the searched_pc.  */
     for (i = 0; i < num_insns; ++i) {
@@ -1786,9 +1802,15 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
 #endif
 
 #ifdef DEBUG_DISAS
-    if (qemu_loglevel_mask(CPU_LOG_TB_OUT_ASM) &&
-        qemu_log_in_addr_range(tb->pc)) {
+    //yang
+	extern int out_asm;
+
+//    if (qemu_loglevel_mask(CPU_LOG_TB_OUT_ASM) &&
+//        qemu_log_in_addr_range(tb->pc)) {
+      if(out_asm){
+        out_asm = 0;
         FILE *logfile = qemu_log_lock();
+        qemu_log("OUT pc %x\n", tb->pc);
         qemu_log("OUT: [size=%d]\n", gen_code_size);
         if (tcg_ctx->data_gen_ptr) {
             size_t code_size = tcg_ctx->data_gen_ptr - tb->tc.ptr;

@@ -4484,8 +4484,10 @@ static void gen_sse(CPUX86State *env, DisasContext *s, int b,
 
 //jzeng
 #include "../../../pemu.h"
+#include "../../../pemu-disas/disas.h"
 #include "../../../hashTable.h"
 int out_asm  = 0;
+void PEMU_instrument_code(void *ptr, unsigned long bbl_addr, int is_regen);
 
 /* convert one instruction. s->base.is_jmp is set if the translation must
    be stopped. Return the next pc value */
@@ -8569,19 +8571,19 @@ static void i386_tr_init_disas_context(DisasContextBase *dcbase, CPUState *cpu)
         {
             if(pemu_exec_stats.PEMU_disas_start == 0)
             {
-                PEMU_disas_trace(tb->pc);
-                PEMU_set_trace(tb->pc);
+                PEMU_disas_trace(dc->base.tb->pc);
+                PEMU_set_trace(dc->base.tb->pc);
                 pemu_exec_stats.PEMU_disas_start = 1;
-            }else if(PEMU_trace_need_disas(tb->pc))
+            }else if(PEMU_trace_need_disas(dc->base.tb->pc))
             {
-                PEMU_disas_trace(tb->pc);
-                PEMU_set_trace(tb->pc);
+                PEMU_disas_trace(dc->base.tb->pc);
+                PEMU_set_trace(dc->base.tb->pc);
             }
         }
         //yang.end
         if(pemu_hook_funcs.bbl_hook != 0) {
             //fprintf(stdout, "new bbl %x\n", tb->pc);
-            disas_basic_block_ex(tb->pc, &pemu_bbl);
+            disas_basic_block_ex(dc->base.tb->pc, &pemu_bbl);
             pemu_hook_funcs.bbl_hook(pemu_bbl.bbl, 0);
         }
     }

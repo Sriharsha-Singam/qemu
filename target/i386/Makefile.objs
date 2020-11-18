@@ -36,5 +36,5 @@ obj-y += ../../../pin/pin_objs.o
 obj-y += ../../../pin/context_manipulation_api.o ../../../pin/systemcall_api.o
 obj-y += ../../../pin/thread_api.o
 obj-y += ../../../pin/pin_qemu.o
-obj-y += ../../../hashTable.o ../../../disas/disas.o ../../../disas/disas_cache.o
+obj-y += ../../../hashTable.o ../../../pemu-disas/disas.o ../../../pemu-disas/disas_cache.o
 obj-y += ../../../introspect/introspect.o ../../../introspect/semaphore_pemu.o ../../../introspect/dispsys.o

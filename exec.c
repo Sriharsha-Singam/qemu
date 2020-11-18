@@ -4050,3 +4050,17 @@ void mtree_print_dispatch(AddressSpaceDispatch *d, MemoryRegion *root)
 }
 
 #endif
+
+////jzeng
+//uint8_t * get_ram_addr(void)
+//{
+//    RAMBlock *block, *new_block;
+//    QTAILQ_FOREACH(block, &ram_list.blocks, next) {
+//        if (block->offset == 0x0) {
+//            //printf("get_ram_addr:%x\n", block->host+ram_size);
+//            return block->host + ram_size;
+//        }
+//    }
+//    return 0;
+//}
+////end

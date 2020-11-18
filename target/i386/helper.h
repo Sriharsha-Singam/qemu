@@ -207,7 +207,7 @@ DEF_HELPER_FLAGS_2(pext, TCG_CALL_NO_RWG_SE, tl, tl, tl)
 //jzeng
 //DEF_HELPER_0(inst_hook_0, void)
 DEF_HELPER_1(pemu_trace, void, int)
-DEF_HELPER_1(find_process, void, int)
+DEF_HELPER_2(find_process, void, env, tl)
 DEF_HELPER_1(inst_hook_1, void, ptr)
 DEF_HELPER_2(inst_hook_2, void, ptr, ptr)
 DEF_HELPER_3(inst_hook_3, void, ptr, ptr, ptr)

@@ -4055,12 +4055,22 @@ void mtree_print_dispatch(AddressSpaceDispatch *d, MemoryRegion *root)
 uint8_t * get_ram_addr(void)
 {
     RAMBlock *block, *new_block;
-    QLIST_FOREACH(block, &ram_list.blocks, next) {
+    /*QLIST_FOREACH(block, &ram_list.blocks, next) {
+    	fprintf(stdout, "QLIST_FOREACH ==> RAM Block: offset=%p and mem_region_addr=%p\n", block->offset, block->mr->addr);
         if (block->offset == 0x0) {
             //printf("get_ram_addr:%x\n", block->host+ram_size);
-            return block->host + ram_size;
+            fprintf(stdout, "RAMBLOCK_FOREACH ==> get_ram_addr:%p\n", block->host+ram_size);
+            //return block->host + ram_size;
         }
+    }*/
+    RAMBLOCK_FOREACH(block) {
+    	fprintf(stdout, "RAMBLOCK_FOREACH ==> RAM Block: offset=%p and mem_region_addr=%p\n", block->offset, block->mr->addr);
+	if (block->offset == 0x0) {
+		fprintf(stdout, "RAMBLOCK_FOREACH ==> get_ram_addr:%p\n", block->host+ram_size);
+		return block->host + ram_size;
+	}
     }
     return 0;
 }
 //end
+

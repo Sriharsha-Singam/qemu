@@ -694,7 +694,10 @@ int cpu_exec(CPUState *cpu)
         cc = CPU_GET_CLASS(cpu);
 #else /* buggy compiler */
         /* Assert that the compiler does not smash local variables. */
-        g_assert(cpu == current_cpu);
+	if (cpu != current_cpu) {
+            fprintf(stdout, "cpu = %p && current_cpu = %p\n", cpu, current_cpu);
+	}
+	g_assert(cpu == current_cpu);
         g_assert(cc == CPU_GET_CLASS(cpu));
 #endif /* buggy compiler */
 #ifndef CONFIG_SOFTMMU

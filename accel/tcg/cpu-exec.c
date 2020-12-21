@@ -657,6 +657,55 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 #endif
 }
 
+
+#include <execinfo.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ucontext.h>
+#include <unistd.h>
+
+/* This structure mirrors the one found in /usr/include/asm/ucontext.h */
+//typedef struct _sig_ucontext {
+// unsigned long     uc_flags;
+// ucontext_t        *uc_link;
+// stack_t           uc_stack;
+// sigcontext_t      uc_mcontext;
+ //sigset_t          uc_sigmas
+//	 k;
+//} sig_ucontext_t;
+
+void test_handler(int sig_num)
+{
+ void *             array[50];
+ void *             caller_address;
+ char **            messages;
+ int                size, i;
+
+ //fprintf(stderr, "signal %d (%s), address is %p from %p\r\n",
+ // sig_num, strsignal(sig_num), info->si_addr,
+ // (void *)caller_address);
+
+ size = backtrace(array, 50);
+
+ /* overwrite sigaction with caller's address */
+ array[1] = cpu_exec;
+
+ messages = backtrace_symbols(array, size);
+
+ /* skip first stack frame (points here) */
+ for (i = 1; i < size && messages != NULL; ++i)
+ {
+  fprintf(stderr, "[bt]: (%d) %s\r\n", i, messages[i]);
+ }
+
+ free(messages);
+
+ exit(EXIT_FAILURE);
+}
+
+
 /* main execution loop */
 
 int cpu_exec(CPUState *cpu)
@@ -696,6 +745,9 @@ int cpu_exec(CPUState *cpu)
         /* Assert that the compiler does not smash local variables. */
 	if (cpu != current_cpu) {
             fprintf(stdout, "cpu = %p && current_cpu = %p\n", cpu, current_cpu);
+	    //test_handler(0);
+	    cpu = current_cpu;
+	    cc = CPU_GET_CLASS(cpu);
 	}
 	g_assert(cpu == current_cpu);
         g_assert(cc == CPU_GET_CLASS(cpu));

@@ -671,6 +671,13 @@ void PEMU_start_PEMUThread(void);
 //yang
 void helper_find_process(CPUX86State *env, target_ulong pc)
 {
+    if (PEMU_find_process(0)) {
+        fprintf(stdout, "helper_find_process() ==> TRUE");
+    } 
+    //else {
+    //	fprintf(stdout, "helper_find_process() ==> ");
+    //}
+    
     if(pemu_exec_stats.PEMU_cr3 == 0
        && pemu_exec_stats.PEMU_start)
     {

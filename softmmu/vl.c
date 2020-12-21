@@ -2791,6 +2791,8 @@ static void configure_accelerators(const char *progname)
     }
 }
 
+#define PEMU_EXTRA_MEMORY 0x200000
+
 static void create_default_memdev(MachineState *ms, const char *path)
 {
     Object *obj;
@@ -2800,7 +2802,7 @@ static void create_default_memdev(MachineState *ms, const char *path)
     if (path) {
         object_property_set_str(obj, path, "mem-path", &error_fatal);
     }
-    object_property_set_int(obj, ms->ram_size, "size", &error_fatal);
+    object_property_set_int(obj, ms->ram_size + PEMU_EXTRA_MEMORY, "size", &error_fatal);
     object_property_add_child(object_get_objects_root(), mc->default_ram_id,
                               obj, &error_fatal);
     /* Ensure backend's memory region name is equal to mc->default_ram_id */

@@ -1685,6 +1685,8 @@ static pthread_t PEMUThread;
 
 void *do_PEMUThread(void *param)
 {
+    fprintf(stdout, "do_PEMUThread() Start\r\n");
+    system("pwd");
     char *error;
     handle = dlopen(pemu_exec_stats.PEMU_plugin_name, RTLD_NOW);
     if (0 != (error = dlerror())){
@@ -1702,26 +1704,57 @@ void *do_PEMUThread(void *param)
 }
 void PEMU_start_PEMUThread(void)
 {
+    fprintf(stdout, "PEMU_start_PEMUThread()\r\n");
     pthread_create(&PEMUThread, NULL, &do_PEMUThread, (void *) 0);
+}
+
+
+#include <stdio.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void segv_handler(int sig);
+
+void segv_handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
 }
 
 
 static void do_command(Monitor *mon, const QDict *qdict)
 {
+
+    signal(SIGSEGV, segv_handler);
+
     const char *pname;
 
     pname = qdict_get_str(qdict, "prog");
     strcpy(pemu_exec_stats.PEMU_binary_name, pname);
 
     pname = qdict_get_str(qdict, "plugin");
-    sprintf(pemu_exec_stats.PEMU_plugin_name, "../../plugins/%s", pname);
+    sprintf(pemu_exec_stats.PEMU_plugin_name, "../../plugins/build/%s", pname);
 
-    PEMU_init(mon_get_cpu());
+    //hmp_info_mtree(mon, qdict);
+    hmp_info_ramblock(mon, qdict);
+
+    PEMU_init(mon_get_cpu(), mon);
 
     fprintf(stdout, "program: %s\tplugin: %s\n", pemu_exec_stats.PEMU_binary_name,
             pemu_exec_stats.PEMU_plugin_name);
 
     pemu_exec_stats.PEMU_start = 1;
+    
+    PEMU_start_PEMUThread();
 }
 
 

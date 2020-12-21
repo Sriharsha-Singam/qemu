@@ -951,10 +951,10 @@ void pc_memory_init(PCMachineState *pcms,
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
     X86MachineState *x86ms = X86_MACHINE(pcms);
 
-    machine->ram_size =x86ms->below_4g_mem_size + x86ms->above_4g_mem_size +  PEMU_EXTRA_MEMORY; 
+    //machine->ram_size =x86ms->below_4g_mem_size + x86ms->above_4g_mem_size; 
 
     assert(machine->ram_size == x86ms->below_4g_mem_size +
-                                x86ms->above_4g_mem_size + PEMU_EXTRA_MEMORY);
+                                x86ms->above_4g_mem_size);
 
     linux_boot = (machine->kernel_filename != NULL);
 

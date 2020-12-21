@@ -1220,6 +1220,7 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
             pemu_exec_stats.PEMU_int_level = 0; //jzeng
             pemu_exec_stats.PEMU_start_trace_syscall = 1;
             if(pemu_hook_funcs.enter_syscall_hook != 0){
+                fprintf(stdout, "do_interrupt_all() enter_syscall_hook\r\n");
                 pemu_hook_funcs.enter_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
             }
 
@@ -1227,13 +1228,14 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
             if(env->regs[R_EAX] == 252)
             {
                 if(pemu_hook_funcs.fini_hook) {
+                    fprintf(stdout, "do_interrupt_all(): Fini_Hook\r\n");
                     pemu_hook_funcs.fini_hook(0, 0);
                     pemu_exec_stats.PEMU_start = 0;
                 }
             }
-#ifdef PEMU_DEBUG
-            //fprintf(stdout, "int80 start syscall\t%x\n", env->regs[R_EAX]);
-#endif
+//#ifdef PEMU_DEBUG
+            fprintf(stdout, "int80 start syscall\t%x\t\thook:%p\n", env->regs[R_EAX], pemu_hook_funcs.enter_syscall_hook);
+//#endif
         }else{
             pemu_exec_stats.PEMU_int_level++;
         }
@@ -2426,6 +2428,7 @@ void helper_iret_protected(CPUX86State *env, int shift, int next_eip)
             if(pemu_exec_stats.PEMU_start_trace_syscall) {
                 pemu_exec_stats.PEMU_start_trace_syscall = 0;
                 if(pemu_hook_funcs.exit_syscall_hook != 0) {
+                   fprintf(stdout, "exit_syscall_hook\r\n");
                     pemu_hook_funcs.exit_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
                 }
             }
@@ -2460,6 +2463,7 @@ void helper_sysenter(CPUX86State *env)
         pemu_exec_stats.PEMU_int_level = 0;
         //fprintf(stdout, "sysenter system call: %d eip=%x\n", env->regs[R_EAX], env->eip);
         if(pemu_hook_funcs.enter_syscall_hook != 0){
+            fprintf(stdout, "helper_sysenter() ENTER SYSCALL\r\n");
             pemu_hook_funcs.enter_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
         }
         if(env->regs[R_EAX] == 252) {
@@ -2468,6 +2472,7 @@ void helper_sysenter(CPUX86State *env)
                 pemu_exec_stats.PEMU_start = 0;
             }
         }
+        fprintf(stdout, "helper_sysenter() start syscall\t%x\t\thook:%p\n", env->regs[R_EAX], pemu_hook_funcs.enter_syscall_hook);
     }
     //end
 

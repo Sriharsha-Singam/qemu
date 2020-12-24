@@ -4064,14 +4064,14 @@ uint8_t * get_ram_addr(Monitor* monitor)
             //return block->host + ram_size;
         }
     }*/
-    fprintf(stdout, "\r\n");
+    /*fprintf(stdout, "\r\n");
     RAMBLOCK_FOREACH(block) {
         fprintf(stdout, "get_ram_addr:%p  & block->host: %p  &  block: %p  & block->mr->addr: %p  &  ram size: %li  &  used length: %li  &  max length: %li  &  offset: 0x%lx \r\n", block->host+ram_size, block->host, block, block->mr->addr, ram_size, block->used_length, block->max_length, block->offset);
-    }
+    }*/
     RAMBLOCK_FOREACH(block) {
-    	fprintf(stdout, "RAMBLOCK_FOREACH ==> RAM Block: offset=0x%lx and mem_region_addr=%p\n", block->offset, block->mr->addr);
+    	//fprintf(stdout, "RAMBLOCK_FOREACH ==> RAM Block: offset=0x%lx and mem_region_addr=%p\n", block->offset, block->mr->addr);
 	if (block->offset == 0x0) {
-		fprintf(stdout, "RAMBLOCK_FOREACH ==> get_ram_addr:%p\n", block->host+ram_size);
+		//fprintf(stdout, "RAMBLOCK_FOREACH ==> get_ram_addr:%p\n", block->host+ram_size);
 		return block->host + ram_size;
 	}
     }

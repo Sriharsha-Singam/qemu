@@ -671,9 +671,9 @@ void PEMU_start_PEMUThread(void);
 //yang
 void helper_find_process(CPUX86State *env, target_ulong pc)
 {
-    if (PEMU_find_process(0)) {
-        fprintf(stdout, "helper_find_process() ==> TRUE");
-    } 
+    //if (PEMU_find_process(0)) {
+    //    fprintf(stdout, "PROCESS FOUND NOW helper_find_process() ==> TRUE\r\n");
+    //} 
     //else {
     //	fprintf(stdout, "helper_find_process() ==> ");
     //}
@@ -682,6 +682,7 @@ void helper_find_process(CPUX86State *env, target_ulong pc)
        && pemu_exec_stats.PEMU_start)
     {
         if(PEMU_find_process(0)) {
+	    fprintf(stdout, "PROCESS FOUND NOW -- Starting PEMUTHREAD ==> TRUE\r\n");
             PEMU_start_PEMUThread();
             if(pemu_exec_stats.PEMU_cr3 == env->cr[3])
             {
@@ -691,23 +692,63 @@ void helper_find_process(CPUX86State *env, target_ulong pc)
             }
         }
     }
+
+    /*if(pemu_hook_funcs.enter_syscall_hook != 0 && pemu_exec_stats.PEMU_start){
+	//fprintf(stdout, "CHANGE CR3 after enter_syscall_hook\r\n");
+	if(PEMU_find_process(0)) {
+	    //fprintf(stdout, "PROCESS FOUND NOW -- Starting PEMUTHREAD ==> TRUE\r\n");
+            //PEMU_start_PEMUThread();
+            if(pemu_exec_stats.PEMU_cr3 == env->cr[3])
+            {
+                tb_flush(env_cpu(env));
+                pemu_exec_stats.PEMU_already_flush = 1;
+                pemu_exec_stats.PEMU_int_level = -1;
+            }
+        }
+    }*/
 }
+
+/*void backtracing(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}*/
+
 
 void cpu_x86_update_cr3(CPUX86State *env, target_ulong new_cr3)
 {
-    helper_find_process(env, 0);
+
+    
+    
+    if(pemu_hook_funcs.enter_syscall_hook != 0){
+	//fprintf(stdout, "CHANGE CR3 after enter_syscall_hook = 0x%lx\r\n", new_cr3);
+    }
+
+    if (pemu_exec_stats.PEMU_start) {
+	pemu_exec_stats.cr3_changed = 1;
+	//fprintf(stdout, "CHANGE CR3 after PEMU_start = 0x%lx && env->cr3 = 0x%lx && pemu_exec_stats.PEMU_cr3 = 0x%lx\r\n", new_cr3, env->cr[3], pemu_exec_stats.PEMU_cr3);
+     }
+    //helper_find_process(env, 0);
     //jzeng.begin
-    if(!pemu_exec_stats.PEMU_already_flush
+    /*if(!pemu_exec_stats.PEMU_already_flush
        && pemu_exec_stats.PEMU_start
        && pemu_exec_stats.PEMU_cr3 != 0
        && pemu_exec_stats.PEMU_cr3 == new_cr3) {
         tb_flush(env_cpu(env));
         pemu_exec_stats.PEMU_already_flush = 1;
         pemu_exec_stats.PEMU_int_level = -1;
-    }
+    }*/
     //end
-
+    
     env->cr[3] = new_cr3;
+    PEMU_update_cpux86(env);
     if (env->cr[0] & CR0_PG_MASK) {
         qemu_log_mask(CPU_LOG_MMU,
                         "CR3 update: CR3=" TARGET_FMT_lx "\n", new_cr3);

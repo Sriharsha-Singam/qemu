@@ -1698,14 +1698,16 @@ void *do_PEMUThread(void *param)
         }
         else {
             int r = (int)plugin_main();
-            fprintf(stdout, "PEMU_start\t%x\t%d\t%x\n", pemu_exec_stats.PEMU_start, r, plugin_main);
+	    pemu_exec_stats.PEMU_main_thread_started = 1;
+            fprintf(stdout, "PEMU_start\t%p\t%p\t%d\t%p\n", pemu_exec_stats.PEMU_start, pemu_hook_funcs.enter_syscall_hook, r, plugin_main);
         }
     }
 }
 void PEMU_start_PEMUThread(void)
 {
-    fprintf(stdout, "PEMU_start_PEMUThread()\r\n");
+    //fprintf(stdout, "PEMU_start_PEMUThread()\r\n");
     pthread_create(&PEMUThread, NULL, &do_PEMUThread, (void *) 0);
+    //do_PEMUThread(NULL);
 }
 
 
@@ -1745,7 +1747,7 @@ static void do_command(Monitor *mon, const QDict *qdict)
     sprintf(pemu_exec_stats.PEMU_plugin_name, "../../plugins/build/%s", pname);
 
     //hmp_info_mtree(mon, qdict);
-    hmp_info_ramblock(mon, qdict);
+    //hmp_info_ramblock(mon, qdict);
 
     PEMU_init(mon_get_cpu(), mon);
 
@@ -1754,7 +1756,7 @@ static void do_command(Monitor *mon, const QDict *qdict)
 
     pemu_exec_stats.PEMU_start = 1;
     
-    PEMU_start_PEMUThread();
+    //PEMU_start_PEMUThread();
 }
 
 

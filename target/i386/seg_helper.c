@@ -1206,28 +1206,12 @@ static void handle_even_inj(CPUX86State *env, int intno, int is_int,
 
 //jzeng
 #include "../../../pemu.h"
-//#include "../../../qemu-pemu.h"
 #include "../../../pin/pin.h"
-//#include "../../../pemu_config.h"
 #include "../../../linux.h"
 void PEMU_start_PEMUThread(void);
-//extern CPUX86State* pemu_cpu_state;
-
-void backtracing(int sig) {
-  void *array[10];
-  size_t size;
-
-  // get void*'s for all entries on the stack
-  size = backtrace(array, 10);
-
-  // print out all the frames to stderr
-  fprintf(stderr, "Error: signal %d:\n", sig);
-  backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(1);
-}
 
 void check_syscall(CPUX86State *env) {
-	if (pemu_exec_stats.PEMU_start && pemu_exec_stats.cr3_changed && pemu_exec_stats.PEMU_cr3 == 0 && PEMU_find_process(0) && pemu_exec_stats.PEMU_cr3 == env->cr[3]) {
+	if (pemu_exec_stats.PEMU_start && pemu_exec_stats.cr3_changed && pemu_exec_stats.PEMU_cr3 == 0 && PEMU_find_process(0) && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()) {
 		PEMU_start_PEMUThread();
 		tb_flush(env_cpu(env));
 		pemu_exec_stats.PEMU_already_flush = 1;
@@ -1249,16 +1233,14 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
     PEMU_update_cpux86(env);
     pemu_cpu_state = env;
 
-    if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == env->cr[3]){
+    if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == PEMU_get_cr3()){
         if(intno == 0x80){
+#ifdef PEMU_DEBUG
 		fprintf(stdout, "PEMU_cr3=0x%lx  vs  PEMU_get_cr3()=0x%lx  vs  env->cr[3]=0x%lx\r\n", pemu_exec_stats.PEMU_cr3, PEMU_get_cr3(), env->cr[3]);
-
+#endif
             pemu_exec_stats.PEMU_int_level = 0; //jzeng
             pemu_exec_stats.PEMU_start_trace_syscall = 1;
             if(pemu_hook_funcs.enter_syscall_hook != 0){
-		fprintf(stdout, "Setting PIN_SetSyscallNumber\r\n");
-		//PIN_SetSyscallNumber(pin_context, SYSCALL_STANDARD_IA32_LINUX, (ADDRINT)env->regs[R_EAX]);
-		fprintf(stdout, "After PIN_SetSyscallNumber\r\n");
                 pemu_hook_funcs.enter_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
             }
 
@@ -1266,9 +1248,9 @@ static void do_interrupt_all(X86CPU *cpu, int intno, int is_int,
             if(env->regs[R_EAX] == 252)
             {
                 if(pemu_hook_funcs.fini_hook) {
-                    fprintf(stdout, "SYSCALL FINISH! do_interrupt_all(): Fini_Hook\r\n");
                     pemu_hook_funcs.fini_hook(0, 0);
                     pemu_exec_stats.PEMU_start = 0;
+		    //pemu_exec_stats.PEMU_main_thread_started = 0;
                 }
             }
         }else{
@@ -2497,27 +2479,18 @@ void helper_sysenter(CPUX86State *env)
     PEMU_update_cpux86(env);
     check_syscall(env);
     if(pemu_exec_stats.PEMU_start && pemu_exec_stats.PEMU_cr3 == env->cr[3]){
-	//fprintf(stdout, "PEMU_cr3=0x%lx  vs  PEMU_get_cr3()=0x%lx  vs  env->cr[3]=0x%lx\r\n", pemu_exec_stats.PEMU_cr3, PEMU_get_cr3(), env->cr[3]);
         pemu_exec_stats.PEMU_start_trace_syscall = 1;
         pemu_exec_stats.PEMU_int_level = 0;
-	/*char syscall_finder[256];
-	snprintf(syscall_finder, sizeof syscall_finder, "ausyscall x86_64 %d", env->regs[R_EAX]);
-	fprintf(stdout, "%d => ", env->regs[R_EAX]);
-	fflush(stdout);
-	system(syscall_finder);*/
 
         if(pemu_hook_funcs.enter_syscall_hook != 0){
-	    fprintf(stdout, "Setting PIN_SetSyscallNumber\r\n");
-	    //PIN_SetSyscallNumber(pin_context, SYSCALL_STANDARD_IA32_LINUX, (ADDRINT)env->regs[R_EAX]);
-	fprintf(stdout, "After PIN_SetSyscallNumber\r\n");
             pemu_hook_funcs.enter_syscall_hook(pemu_exec_stats.PEMU_pid, pin_context, SYSCALL_STANDARD_IA32_LINUX, 0);
         }
 
         if(env->regs[R_EAX] == 252) {
             if(pemu_hook_funcs.fini_hook) {
-		fprintf(stdout, "FINISH SYSCALL! helper_sysenter()\r\n");
                 pemu_hook_funcs.fini_hook(0, 0);
                 pemu_exec_stats.PEMU_start = 0;
+		//pemu_exec_stats.PEMU_main_thread_started = 0;
             }
         }
     }

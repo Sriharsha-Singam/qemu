@@ -665,8 +665,8 @@ void cpu_x86_update_cr0(CPUX86State *env, uint32_t new_cr0)
    the PDPT */
 
 //jzeng
-#include "../../../linux.h"
-#include "../../../pemu.h"
+#include "../../../pemu/linux.h"
+#include "../../../pemu/pemu.h"
 void PEMU_start_PEMUThread(void);
 //yang
 void helper_find_process(CPUX86State *env, target_ulong pc)

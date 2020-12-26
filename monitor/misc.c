@@ -1678,7 +1678,7 @@ int monitor_fd_param(Monitor *mon, const char *fdname, Error **errp)
 }
 
 //jzeng:
-#include "../../pemu.h"
+#include "../../pemu/pemu.h"
 #include <dlfcn.h>
 static void *handle;
 static pthread_t PEMUThread;
@@ -1697,7 +1697,7 @@ void *do_PEMUThread(void *param)
         else {
             int r = (int)plugin_main();
 	    pemu_exec_stats.PEMU_main_thread_started = 1;
-            fprintf(stdout, "PEMU_start\t%p\t%p\t%d\t%p\n", pemu_exec_stats.PEMU_start, pemu_hook_funcs.enter_syscall_hook, r, plugin_main);
+            fprintf(stdout, "PEMU_start\t%p\t%d\t%p\n", pemu_exec_stats.PEMU_start, r, plugin_main);
         }
     }
 }
@@ -1715,11 +1715,10 @@ static void do_command(Monitor *mon, const QDict *qdict)
     pname = qdict_get_str(qdict, "prog");
     strcpy(pemu_exec_stats.PEMU_binary_name, pname);
 
-    pname = qdict_get_str(qdict, "plugin");
-    // TODO: Change to use ENV_VAR to get path for plugins! More easily workable in new work environments.
-    sprintf(pemu_exec_stats.PEMU_plugin_name, "../../plugins/build/%s", pname);
-
     PEMU_init(mon_get_cpu());
+
+    pname = qdict_get_str(qdict, "plugin");
+    sprintf(pemu_exec_stats.PEMU_plugin_name, "%s/plugins/build/%s", pemu_path, pname);
 
     fprintf(stdout, "program: %s\tplugin: %s\n", pemu_exec_stats.PEMU_binary_name,
             pemu_exec_stats.PEMU_plugin_name);

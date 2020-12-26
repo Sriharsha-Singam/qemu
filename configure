@@ -4467,7 +4467,7 @@ fi
 #XEDLPATH=-L$XEDKIT/lib
 #XEDCFLAG=-I$XEDKIT/include
 
-XEDKIT=$source_path/../xed2/xed2-$TARGET_LONG
+XEDKIT=$source_path/../pemu/xed2/xed2-$TARGET_LONG
 XEDLPATH=-L$XEDKIT/lib
 XEDCFLAG=-I$XEDKIT/include
 

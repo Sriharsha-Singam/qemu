@@ -4483,9 +4483,9 @@ static void gen_sse(CPUX86State *env, DisasContext *s, int b,
 }
 
 //jzeng
-#include "../../../pemu.h"
-#include "../../../pemu-disas/disas.h"
-#include "../../../hashTable.h"
+#include "../../../pemu/pemu.h"
+#include "../../../pemu/pemu-disas/disas.h"
+#include "../../../pemu/hashTable.h"
 int out_asm  = 0;
 void PEMU_instrument_code(void *ptr, unsigned long bbl_addr, int is_regen);
 

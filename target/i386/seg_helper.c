@@ -1205,9 +1205,9 @@ static void handle_even_inj(CPUX86State *env, int intno, int is_int,
  */
 
 //jzeng
-#include "../../../pemu.h"
-#include "../../../pin/pin.h"
-#include "../../../linux.h"
+#include "../../../pemu/pemu.h"
+#include "../../../pemu/pin/pin.h"
+#include "../../../pemu/linux.h"
 void PEMU_start_PEMUThread(void);
 
 void check_syscall(CPUX86State *env) {

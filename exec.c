@@ -4052,7 +4052,7 @@ void mtree_print_dispatch(AddressSpaceDispatch *d, MemoryRegion *root)
 #endif
 
 //jzeng
-#include "../pemu.h"
+#include "../pemu/pemu.h"
 uint8_t * get_ram_addr(Monitor* monitor)
 {
     RAMBlock *block, *new_block;
